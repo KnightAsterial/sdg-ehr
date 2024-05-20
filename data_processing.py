@@ -78,8 +78,9 @@ for datapoint in datapoints:
     for visit in history_so_far:
         renamed_visit = []
         for code in visit:
-            code_name = icd_dict_df.loc[code]["LONG_TITLE"]
-            renamed_visit.append(code_name)
+            if code in icd_dict_df.index:
+                code_name = icd_dict_df.loc[code]["LONG_TITLE"]
+                renamed_visit.append(code_name)
         renamed_history_so_far.append(renamed_visit)
 
     renamed_datapoints.append((renamed_history_so_far, combined_notes))

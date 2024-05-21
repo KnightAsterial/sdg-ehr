@@ -8,12 +8,12 @@ from bitsandbytes import optim
 import datasets
 import os
 
-ROOT_DIR = os.environ["OUTPUT_ROOT"]
-if ROOT_DIR is None:
+OUTPUT_ROOT = os.environ["OUTPUT_ROOT"]
+if OUTPUT_ROOT is None:
     print("OUTPUT_ROOT ENVIRONMENT VARIABLE NOT SET")
     exit(1)
 
-DATASET_FILE = os.environ["DATASET_DIR"]
+DATASET_FILE = os.environ["DATASET_FILE"]
 if DATASET_FILE is None:
     print("DATASET_FILE ENVIRONMENT VARIABLE NOT SET")
     exit(1)
@@ -52,7 +52,7 @@ def get_dataset_splits():
 
 def main():
 
-    output_dir = f"{ROOT_DIR}/finetuned_model"
+    output_dir = f"{OUTPUT_ROOT}/finetuned_model"
     per_device_train_batch_size = 4
     gradient_accumulation_steps = 4
     optim = "paged_adamw_32bit"

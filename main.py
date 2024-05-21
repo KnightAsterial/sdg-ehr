@@ -131,7 +131,7 @@ def main():
     )
 
     # Train model
-    trainer.train(resume_from_checkpoint = True)
+    trainer.train()
 
     # Save model
     trainer.save_model(f"{OUTPUT_ROOT}/finetuned_model")

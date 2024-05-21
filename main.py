@@ -80,7 +80,7 @@ def main():
     )
 
     # Load model
-    model = AutoModelForCausalLM.from_pretrained(model_id, quantization_config=quantization_config).to('cuda')
+    model = AutoModelForCausalLM.from_pretrained(model_id, quantization_config=quantization_config)
 
     # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)

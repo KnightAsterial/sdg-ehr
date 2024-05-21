@@ -98,10 +98,6 @@ def main():
 
     # Add LoRA adapters to the model
     model = get_peft_model(model, lora_config) # Load and prepare dataset
-    dataset = load_dataset("")  # our dataset path
-    train_dataset = dataset["train"]
-
-    train_dataset.set_format("torch") # Maybe??
 
 
     # Training arguments

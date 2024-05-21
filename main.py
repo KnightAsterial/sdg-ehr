@@ -5,26 +5,64 @@ from transformers import TrainingArguments, Trainer
 from datasets import load_dataset
 from trl import SFTTrainer, setup_chat_format
 from bitsandbytes import optim
+import datasets
+import os
+
+ROOT_DIR = os.environ["OUTPUT_ROOT"]
+if ROOT_DIR is None:
+    print("OUTPUT_ROOT ENVIRONMENT VARIABLE NOT SET")
+    exit(1)
 
 
-def formatting_func(example):
-    text = f"### USER: {example['data'][0]}\n### ASSISTANT: {example['data'][1]}"
-    return text
+def prompt_formatter(example):
+  codes = example['codes']
 
-def main(args):
+  narrative = ["PATIENT HISTORY:"]
+  for idx, visit in enumerate(codes, 1):
+      visit_text = (
+          f"Visit {idx}:\n"
+          f"  Diagnoses: {', '.join(visit) if visit else 'None'}\n"
+      )
+      narrative.append(visit_text)
+  narrative.append("GENERATE A SET OF NURSES NOTES THAT WOULD BE WRITTEN ABOUT THIS PATIENT GIVEN THEIR DIAGNOSES HISTORY.")
+  prompt = '\n'.join(narrative)
 
-    output_dir = f"{YOUR_HF_USERNAME}/llama-7b-qlora-ultrachat"
+  example['prompt'] = prompt
+
+  return example
+
+def get_dataset_splits():
+    dataset_file = "______________TODO _______________"
+    dataset = datasets.load_dataset('json', data_files=dataset_file)
+
+    processed_dataset = dataset.map(prompt_formatter)
+    processed_dataset = processed_dataset.rename_column("notes", "completion")
+    processed_dataset = processed_dataset.remove_columns("codes")
+
+    splits = processed_dataset['train'].train_test_split(test_size=0.2)
+
+    return splits
+
+
+
+def main():
+
+    output_dir = f"{ROOT_DIR}/finetuned_model"
     per_device_train_batch_size = 4
     gradient_accumulation_steps = 4
     optim = "paged_adamw_32bit"
-    save_steps = 10
-    logging_steps = 10
-    learning_rate = 2e-4
+    save_steps = 50
+    logging_steps = 50
+    learning_rate = 2.5e-5
     max_grad_norm = 0.3
-    max_steps = 1000
+    max_steps = 3000
     warmup_ratio = 0.03
+    eval_strategy = "steps"
+    eval_steps = 50
     lr_scheduler_type = "constant"
 
+    # Load dataset
+    splits = get_dataset_splits()
 
 
     # Load the 7b mistral model
@@ -37,7 +75,7 @@ def main(args):
     )
 
     # Load model
-    model = AutoModelForCausalLM.from_pretrained(model_id, quantization_config=quantization_config)
+    model = AutoModelForCausalLM.from_pretrained(model_id, quantization_config=quantization_config).to('cuda')
 
     # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
@@ -72,27 +110,29 @@ def main(args):
         learning_rate=learning_rate,
         max_grad_norm=max_grad_norm,
         max_steps=max_steps,
+        eval_strategy=eval_strategy,
+        eval_steps=eval_steps,
         warmup_ratio=warmup_ratio,
         lr_scheduler_type=lr_scheduler_type,
         gradient_checkpointing=True,
-        push_to_hub=True,
+        report_to="tensorboard"
     )
 
     # Initialize SFTTrainer
     trainer = SFTTrainer(
         model=model,
         args=training_arguments,
-        train_dataset=train_dataset,
+        train_dataset=splits['train'],
+        eval_dataset=splits['test'],
         packing=True,
-        dataset_text_field="_______TODO________",
         tokenizer=tokenizer,
-        max_seq_length=8192,
-        formatting_func=formatting_func,
+        max_seq_length=32768
     )
 
     # Train model
-    trainer.train()
+    trainer.train(resume_from_checkpoint = True)
 
     # Save model
     trainer.save_model("./finetuned_model")
 
+main()

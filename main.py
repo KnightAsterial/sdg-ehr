@@ -13,6 +13,11 @@ if ROOT_DIR is None:
     print("OUTPUT_ROOT ENVIRONMENT VARIABLE NOT SET")
     exit(1)
 
+DATASET_FILE = os.environ["DATASET_DIR"]
+if DATASET_FILE is None:
+    print("DATASET_FILE ENVIRONMENT VARIABLE NOT SET")
+    exit(1)
+
 
 def prompt_formatter(example):
   codes = example['codes']
@@ -32,7 +37,7 @@ def prompt_formatter(example):
   return example
 
 def get_dataset_splits():
-    dataset_file = "______________TODO _______________"
+    dataset_file = DATASET_FILE
     dataset = datasets.load_dataset('json', data_files=dataset_file)
 
     processed_dataset = dataset.map(prompt_formatter)

@@ -44,7 +44,7 @@ def get_dataset_splits():
     processed_dataset = processed_dataset.rename_column("notes", "completion")
     processed_dataset = processed_dataset.remove_columns("codes")
 
-    splits = processed_dataset['train'].train_test_split(test_size=0.2)
+    splits = processed_dataset['train'].train_test_split(test_size=0.1)
 
     return splits
 
@@ -54,16 +54,16 @@ def main():
 
     output_dir = f"{OUTPUT_ROOT}/finetuned_model"
     per_device_train_batch_size = 4
-    gradient_accumulation_steps = 4
+    gradient_accumulation_steps = 8
     optim = "paged_adamw_32bit"
-    save_steps = 50
-    logging_steps = 50
+    save_steps = 300
+    logging_steps = 30
     learning_rate = 2.5e-5
     max_grad_norm = 0.3
     max_steps = 3000
     warmup_ratio = 0.03
-    eval_strategy = "steps"
-    eval_steps = 50
+    # eval_strategy = "steps"
+    # eval_steps = 600
     lr_scheduler_type = "constant"
 
     # Load dataset
@@ -80,13 +80,15 @@ def main():
     )
 
     # Load model
-    model = AutoModelForCausalLM.from_pretrained(model_id, quantization_config=quantization_config)
+    model = AutoModelForCausalLM.from_pretrained(model_id, quantization_config=quantization_config, torch_dtype=torch.float16, attn_implementation="flash_attention_2")
 
     # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
 
     # Set it to a new token to correctly attend to EOS tokens.
-    tokenizer.add_special_tokens({'pad_token': '<PAD>'})
+    # tokenizer.add_special_tokens({'pad_token': '<PAD>'})
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = 'right'
 
     lora_config = LoraConfig(
         r=8,
@@ -97,8 +99,8 @@ def main():
 
 
     # Add LoRA adapters to the model
-    model = get_peft_model(model, lora_config) # Load and prepare dataset
-
+    # model = get_peft_model(model, lora_config) # Load and prepare dataset
+    model.add_adapter(lora_config)
 
     # Training arguments
     training_arguments = TrainingArguments(
@@ -111,8 +113,8 @@ def main():
         learning_rate=learning_rate,
         max_grad_norm=max_grad_norm,
         max_steps=max_steps,
-        eval_strategy=eval_strategy,
-        eval_steps=eval_steps,
+        # eval_strategy=eval_strategy,
+        # eval_steps=eval_steps,
         warmup_ratio=warmup_ratio,
         lr_scheduler_type=lr_scheduler_type,
         gradient_checkpointing=True,
@@ -125,9 +127,9 @@ def main():
         args=training_arguments,
         train_dataset=splits['train'],
         eval_dataset=splits['test'],
-        packing=True,
+        packing=False,
         tokenizer=tokenizer,
-        max_seq_length=32768
+        max_seq_length=2048
     )
 
     # Train model

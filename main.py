@@ -54,10 +54,10 @@ def main():
 
     output_dir = f"{OUTPUT_ROOT}/finetuned_model"
     per_device_train_batch_size = 4
-    gradient_accumulation_steps = 8
+    gradient_accumulation_steps = 4
     optim = "paged_adamw_32bit"
     save_steps = 300
-    logging_steps = 30
+    logging_steps = 10
     learning_rate = 2.5e-5
     max_grad_norm = 0.3
     max_steps = 3000

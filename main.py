@@ -64,7 +64,8 @@ def main():
     warmup_ratio = 0.03
     # eval_strategy = "steps"
     # eval_steps = 600
-    lr_scheduler_type = "constant"
+    lr_scheduler_type = "constant_with_warmup"
+    gradient_checkpointing_kwargs = {"use_reentrant": False}
 
     # Load dataset
     splits = get_dataset_splits()
@@ -91,8 +92,9 @@ def main():
     tokenizer.padding_side = 'right'
 
     lora_config = LoraConfig(
-        r=8,
-        target_modules=["q_proj", "o_proj", "k_proj", "v_proj", "gate_proj", "up_proj", "down_proj"],
+        r=16,
+        alpha=16,
+        target_modules=["q_proj", "o_proj", "k_proj", "v_proj", "gate_proj", "up_proj", "down_proj", "lm_head"],
         bias="none",
         task_type="CAUSAL_LM",
     )
@@ -118,6 +120,8 @@ def main():
         warmup_ratio=warmup_ratio,
         lr_scheduler_type=lr_scheduler_type,
         gradient_checkpointing=True,
+        gradient_checkpointing_kwargs=gradient_checkpointing_kwargs,
+        weight_decay=0.001,
         report_to="tensorboard"
     )
 

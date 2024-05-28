@@ -93,7 +93,7 @@ def main():
 
     lora_config = LoraConfig(
         r=16,
-        alpha=16,
+        lora_alpha=16,
         target_modules=["q_proj", "o_proj", "k_proj", "v_proj", "gate_proj", "up_proj", "down_proj", "lm_head"],
         bias="none",
         task_type="CAUSAL_LM",

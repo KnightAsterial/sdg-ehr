@@ -39,12 +39,14 @@ def prompt_formatter(example):
 def get_dataset_splits():
     dataset_file = DATASET_FILE
     dataset = datasets.load_dataset('json', data_files=dataset_file)
+    # dataset = datasets.load_dataset('json', data_files=dataset_file, split="train[:16]")
 
     processed_dataset = dataset.map(prompt_formatter)
     processed_dataset = processed_dataset.rename_column("notes", "completion")
     processed_dataset = processed_dataset.remove_columns("codes")
 
     splits = processed_dataset['train'].train_test_split(test_size=0.1)
+    # splits = processed_dataset.train_test_split(test_size=0.1)
 
     return splits
 
@@ -70,18 +72,17 @@ def main():
     # Load dataset
     splits = get_dataset_splits()
 
-
     # Load the 7b mistral model
     model_id = "BioMistral/BioMistral-7B"
 
     quantization_config = BitsAndBytesConfig(
         load_in_4bit=True,
-        bnb_4bit_compute_dtype=torch.float16,
+        bnb_4bit_compute_dtype=torch.bfloat16,
         bnb_4bit_quant_type="nf4"
     )
 
     # Load model
-    model = AutoModelForCausalLM.from_pretrained(model_id, quantization_config=quantization_config, torch_dtype=torch.float16, attn_implementation="flash_attention_2")
+    model = AutoModelForCausalLM.from_pretrained(model_id, quantization_config=quantization_config, torch_dtype=torch.bfloat16, attn_implementation="flash_attention_2")
 
     # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
@@ -92,8 +93,7 @@ def main():
     tokenizer.padding_side = 'right'
 
     lora_config = LoraConfig(
-        r=16,
-        lora_alpha=16,
+        r=8,
         target_modules=["q_proj", "o_proj", "k_proj", "v_proj", "gate_proj", "up_proj", "down_proj", "lm_head"],
         bias="none",
         task_type="CAUSAL_LM",

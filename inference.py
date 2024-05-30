@@ -1,5 +1,5 @@
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, TextStreamer
 from peft import LoraConfig, PeftModel
 from transformers import TrainingArguments, Trainer
 from datasets import load_dataset
@@ -76,11 +76,14 @@ def main():
                     {"role": "user", "content": prompt}
                     ]   
     
-    tokens = tokenizer.apply_chat_template(model_input)
+    tokens = tokenizer.apply_chat_template(model_input, return_tensors="pt").to('cuda')
+    streamer = TextStreamer(tokenizer)
+    output = model.generate(tokens, streamer=streamer, penalty_alpha=0.6, top_k=4, max_new_tokens=2048)
+    # output = model.generate(tokens, num_beams=4, max_new_tokens=2048)
 
-    output = model.generate(tokens)
-
+    output = output.to('cpu')
     print(output)
+    print(tokenizer.decode(input_ids=output, skip_special_tokens=True))
 
 
 main()

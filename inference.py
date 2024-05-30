@@ -69,6 +69,8 @@ def main():
     # model = get_peft_model(model, lora_config) # Load and prepare dataset
     model = PeftModel.from_pretrained(model, MODEL_DIR)
 
+    print(model.generation_config)
+
     test_datum = [["Single liveborn, born in hospital, delivered by cesarean section", "Need for prophylactic vaccination and inoculation against viral hepatitis", "Observation for suspected infectious condition"]]
     prompt = format_single_example(test_datum)
 
@@ -78,7 +80,8 @@ def main():
     
     tokens = tokenizer.apply_chat_template(model_input, return_tensors="pt").to('cuda')
     streamer = TextStreamer(tokenizer)
-    output = model.generate(tokens, streamer=streamer, penalty_alpha=0.6, top_k=4, max_new_tokens=2048)
+
+    output = model.generate(tokens, streamer=streamer, penalty_alpha=0.6, top_k=4, repetition_penalty=1.2, max_new_tokens=2048)
     # output = model.generate(tokens, num_beams=4, max_new_tokens=2048)
 
     output = output.to('cpu')

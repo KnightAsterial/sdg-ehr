@@ -86,7 +86,7 @@ def main():
 
     output = output.to('cpu')
     print(output)
-    print(tokenizer.decode(token_ids=output, skip_special_tokens=True))
+    print(tokenizer.decode(token_ids=output[0], skip_special_tokens=True))
 
 
 main()
